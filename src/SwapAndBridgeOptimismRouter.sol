@@ -137,4 +137,6 @@ contract SwapAndBridgeOptimismRouter is Ownable {
             }
         }
     }
+
+    receive() external payable {}
 }
