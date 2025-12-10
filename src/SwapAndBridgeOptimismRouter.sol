@@ -88,4 +88,33 @@ contract SwapAndBridgeOptimismRouter is Ownable {
             CurrencyLibrary.NATIVE.transfer(msg.sender, ethBalance);
         }
     }
+
+    function unlockCallback(bytes calldata rawData) external returns (bytes memory) {
+        if (msg.sender != address(manager)) revert CallerNotManager();
+        CallbackData memory data = abi.decode(rawData, (CallbackData));
+
+        // Call swap on the PM
+        BalanceDelta delta = manager.swap(data.key, data.params, data.hookData);
+
+        int256 deltaAfter0 = manager.currencyDelta(address(this), data.key.currency0);
+        int256 deltaAfter1 = manager.currencyDelta(address(this), data.key.currency1);
+
+        if (deltaAfter0 < 0) {
+            data.key.currency0.settle(manager, data.sender, uint256(-deltaAfter0), false);
+        }
+
+        if (deltaAfter1 < 0) {
+            data.key.currency1.settle(manager, data.sender, uint256(-deltaAfter1), false);
+        }
+
+        if (deltaAfter0 > 0) {
+            _take(data.key.currency0, data.settings.recipientAddress, uint256(deltaAfter0), data.settings.bridgeTokens);
+        }
+
+        if (deltaAfter1 > 0) {
+            _take(data.key.currency1, data.settings.recipientAddress, uint256(deltaAfter1), data.settings.bridgeTokens);
+        }
+
+        return abi.encode(delta);
+    }
 }
