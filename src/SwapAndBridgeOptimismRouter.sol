@@ -31,8 +31,15 @@ contract SwapAndBridgeOptimismRouter is Ownable {
     IPoolManager public immutable manager;
     IL1StandardBridge public immutable l1StandardBridge;
 
+    mapping(address l1Token => address l2Token) public l1Tol2TokenAddresses;
+
     constructor(IPoolManager _manager, IL1StandardBridge _l1StandardBridge) Ownable(msg.sender) {
         manager = _manager;
         l1StandardBridge = _l1StandardBridge;
+    }
+
+    // Helper
+    function addL1ToL2TokenAddress(address l1Token, address l2Token) external onlyOwner {
+        l1Tol2TokenAddresses[l1Token] = l2Token;
     }
 }
