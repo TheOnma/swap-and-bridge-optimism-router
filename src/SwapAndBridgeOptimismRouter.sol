@@ -31,7 +31,23 @@ contract SwapAndBridgeOptimismRouter is Ownable {
     IPoolManager public immutable manager;
     IL1StandardBridge public immutable l1StandardBridge;
 
+    error CallerNotManager();
+    error TokenCannotBeBridged();
+
     mapping(address l1Token => address l2Token) public l1Tol2TokenAddresses;
+
+    struct CallbackData {
+        address sender;
+        SwapSettings settings;
+        PoolKey key;
+        IPoolManager.SwapParams params;
+        bytes hookData;
+    }
+
+    struct SwapSettings {
+        bool bridgeTokens;
+        address recipientAddress;
+    }
 
     constructor(IPoolManager _manager, IL1StandardBridge _l1StandardBridge) Ownable(msg.sender) {
         manager = _manager;
