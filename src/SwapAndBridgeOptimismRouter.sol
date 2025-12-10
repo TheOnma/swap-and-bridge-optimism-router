@@ -9,6 +9,7 @@ import {PoolKey} from "v4-core/types/PoolKey.sol";
 import {BalanceDelta} from "v4-core/types/BalanceDelta.sol";
 import {IERC20Minimal} from "v4-core/interfaces/external/IERC20Minimal.sol";
 import {TransientStateLibrary} from "v4-core/libraries/TransientStateLibrary.sol";
+import {SwapParams} from "v4-core/types/PoolOperation.sol";
 
 interface IL1StandardBridge {
     function depositETHTo(address _to, uint32 _minGasLimit, bytes calldata _extraData) external payable;
@@ -40,7 +41,7 @@ contract SwapAndBridgeOptimismRouter is Ownable {
         address sender;
         SwapSettings settings;
         PoolKey key;
-        IPoolManager.SwapParams params;
+        SwapParams params;
         bytes hookData;
     }
 
@@ -59,12 +60,11 @@ contract SwapAndBridgeOptimismRouter is Ownable {
         l1Tol2TokenAddresses[l1Token] = l2Token;
     }
 
-    function swap(
-        PoolKey memory key,
-        IPoolManager.SwapParams memory params,
-        SwapSettings memory settings,
-        bytes memory hookData
-    ) external payable returns (BalanceDelta delta) {
+    function swap(PoolKey memory key, SwapParams memory params, SwapSettings memory settings, bytes memory hookData)
+        external
+        payable
+        returns (BalanceDelta delta)
+    {
         // If user requested a bridge of the output tokens
         // we must make sure the output token can be bridged at all
         // otherwise we revert the transaction early
@@ -72,7 +72,7 @@ contract SwapAndBridgeOptimismRouter is Ownable {
             Currency l1TokenToBridge = params.zeroForOne ? key.currency1 : key.currency0;
 
             if (!l1TokenToBridge.isNative()) {
-                address l2Token = l1ToL2TokenAddresses[Currency.unwrap(l1TokenToBridge)];
+                address l2Token = l1Tol2TokenAddresses[Currency.unwrap(l1TokenToBridge)];
                 if (l2Token == address(0)) revert TokenCannotBeBridged();
             }
         }
@@ -130,7 +130,7 @@ contract SwapAndBridgeOptimismRouter is Ownable {
                 l1StandardBridge.depositETHTo{value: amount}(recipient, 0, "");
             } else {
                 address l1Token = Currency.unwrap(currency);
-                address l2Token = l1ToL2TokenAddresses[l1Token];
+                address l2Token = l1Tol2TokenAddresses[l1Token];
 
                 IERC20Minimal(l1Token).approve(address(l1StandardBridge), amount);
                 l1StandardBridge.depositERC20To(l1Token, l2Token, recipient, amount, 0, "");
